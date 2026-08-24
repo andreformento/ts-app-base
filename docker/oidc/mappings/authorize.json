@@ -1,0 +1,12 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/authorize.*"
+  },
+  "response": {
+    "status": 302,
+    "headers": {
+      "Location": "http://localhost:5173/?id_token=eyJhbGciOiJSUzI1NiIsImtpZCI6ImxvY2FsLWRldiJ9.eyJlbWFpbCI6Imhvc3RAbG9jYWwudGVzdCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJuYW1lIjoiTG9jYWwgSG9zdCIsInN1YiI6ImxvY2FsLWhvc3QiLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODEiLCJhdWQiOiJsb2NhbC13ZWItY2xpZW50IiwiaWF0IjoxNzY3MjI1NjAwLCJleHAiOjIwODI3NTg0MDB9.Ve8M5zGGbdLuBXONmdCAnM0ovFpucq_4tDBGXP2hvLHc1TxHBT21pbQsF-MvNGVxThCmjeSE2jxL5Ja8Kamp9xVXlNSEksfiU-rtyjJu6W_HX8Kw9d8XxnL0GAshGuQJWNbgsceQPzkNmsOq8MFDAQ0rK8AcXr23du2hoahmv4TR8MOZiadUPqmHKe76C2PsSEnac950zhq_uC6O-zB_Qz3B0lRM1gkAPG_Ysc8sou-OBRSOcq4kMgKG_KN8-KJpkPTCiFX_xShVaS5dAxKXPsJULZEX2054nCVeSxqKP08rFievvrWEw2H-xDVVCDU4RjSaTXW6aLF5TOOpqj9UuA"
+    }
+  }
+}

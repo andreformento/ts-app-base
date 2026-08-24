@@ -1,0 +1,121 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DATABASE_URL: postgresql://appname:appname@localhost:5432/appname
+
+jobs:
+  static:
+    name: types, lint, unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/workspace
+
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
+
+  e2e-api:
+    name: api e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/workspace
+
+      - run: pnpm test:e2e
+
+  e2e-web:
+    name: browser e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/workspace
+
+      - name: Resolve the Playwright version
+        id: playwright
+        run: echo "version=$(node -p "require('./apps/web/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the browser
+        id: browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - name: Install the browser
+        if: steps.browser.outputs.cache-hit != 'true'
+        run: pnpm --filter @appname/web exec playwright install --with-deps chromium
+
+      - name: Install only the system dependencies
+        if: steps.browser.outputs.cache-hit == 'true'
+        run: pnpm --filter @appname/web exec playwright install-deps chromium
+
+      - name: Build the api, which the browser stack runs
+        run: pnpm --filter @appname/api build
+
+      - run: pnpm test:e2e:web
+
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7
+
+  stack:
+    name: stack and artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start the stack
+        run: make run
+
+      - name: Smoke the running stack over real HTTP
+        run: ./scripts/smoke-stack.sh
+
+      - name: The api container runs as a non-root user
+        run: test "$(docker compose exec -T api id -un)" = node
+
+      - name: The api honours SIGTERM promptly
+        run: |
+          start=$(date +%s)
+          docker compose stop -t 15 api
+          elapsed=$(( $(date +%s) - start ))
+          echo "stopped in ${elapsed}s"
+          test "$elapsed" -lt 10
+
+      - name: Publish the web bundle built by the image
+        run: |
+          docker compose up -d --no-build web
+          id=$(docker compose ps -q web)
+          docker cp "$id:/usr/share/nginx/html" ./web-bundle
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-bundle
+          path: web-bundle
+          retention-days: 7
+
+      - if: always()
+        run: docker compose ps
+
+      - if: failure()
+        run: docker compose logs --no-color
+
+      - if: always()
+        run: make down
