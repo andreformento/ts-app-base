@@ -3,10 +3,10 @@
 **The target host is an OPEN DECISION.** Do not assume one, and do not add
 provider-specific configuration until it is made.
 
-The tension to resolve: NestJS wants a persistent process, and cheap persistent
-hosting is scarce. Candidates (Cloud Run, Fly.io/Railway/Render, a single VPS)
-should be validated against current offerings when you deploy, not assumed up
-front. Until then nothing in the code depends on a platform.
+`PRODUCT.md` records the tension: the infra budget is as close to $0/month as
+possible, NestJS wants a persistent process, and free persistent hosting is
+scarce. Candidates (Cloud Run, Fly.io/Railway/Render, a single VPS) are to be
+validated against current offerings at deploy time, not assumed now.
 
 ## What is settled: the build outputs
 
@@ -51,7 +51,10 @@ The api must:
 - expose `GET /health`, returning 200 only when the database is reachable and
   503 otherwise;
 - log structured JSON to stdout, never to files;
-- shut down cleanly on `SIGTERM`, draining in-flight requests;
+- shut down cleanly on `SIGTERM`, draining in-flight requests but NOT waiting
+  on idle keep-alive sockets — otherwise every rollout stalls for the full
+  grace period. The health probe uses a non-pooled connection for the same
+  reason;
 - store no state on local disk — the filesystem is ephemeral.
 
 ## Database

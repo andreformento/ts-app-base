@@ -94,10 +94,10 @@ jobs:
       - name: The api honours SIGTERM promptly
         run: |
           start=$(date +%s)
-          docker compose stop -t 15 api
+          docker compose stop -t 30 api
           elapsed=$(( $(date +%s) - start ))
           echo "stopped in ${elapsed}s"
-          test "$elapsed" -lt 10
+          test "$elapsed" -lt 5
 
       - name: Publish the web bundle built by the image
         run: |
