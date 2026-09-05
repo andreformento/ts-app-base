@@ -1,4 +1,4 @@
-# ts-hexagonal-base
+# ts-app-base
 
 A TypeScript monorepo template: a NestJS api and a React PWA, tested against
 real containers with no mocks anywhere.
