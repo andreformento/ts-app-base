@@ -9,7 +9,9 @@
     "jsx": "react-jsx",
     "moduleDetection": "force",
     "noEmit": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
   "include": [
     "src",

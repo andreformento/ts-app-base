@@ -1,25 +1,21 @@
-import { execFile, spawn, type ChildProcess } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
+import type { ChildProcess } from 'node:child_process';
 import { promisify } from 'node:util';
 import { resolve } from 'node:path';
-import {
-  PostgreSqlContainer,
-  type StartedPostgreSqlContainer,
-} from '@testcontainers/postgresql';
-import {
-  GenericContainer,
-  type StartedTestContainer,
-  Wait,
-} from 'testcontainers';
+import { PostgreSqlContainer } from '@testcontainers/postgresql';
+import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import { GenericContainer, Wait } from 'testcontainers';
+import type { StartedTestContainer } from 'testcontainers';
 import { SignJWT, exportJWK, generateKeyPair } from 'jose';
 
 const run = promisify(execFile);
 
 const API_DIR = resolve(import.meta.dirname, '../../../api');
 const API_PORT = 3001;
+const PROVIDER_PORT = 8091;
 const WEB_ORIGIN = 'http://127.0.0.1:4173';
 const WEB_CLIENT = 'web-client';
 const ISSUER = 'https://issuer.test';
-const PROVIDER_PORT = 8091;
 
 export type Stack = {
   postgres: StartedPostgreSqlContainer;
@@ -69,9 +65,9 @@ export async function startStack(): Promise<Stack> {
     response: {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      jsonBody: {
         keys: [{ ...jwk, kid: 'test-key', alg: 'RS256', use: 'sig' }],
-      }),
+      },
     },
   });
   await stub(providerBase, {
@@ -127,7 +123,7 @@ async function waitForApi(): Promise<void> {
     } catch {
       // not listening yet
     }
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((resolveWait) => setTimeout(resolveWait, 500));
   }
   throw new Error('The api did not become healthy.');
 }

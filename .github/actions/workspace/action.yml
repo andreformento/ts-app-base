@@ -1,5 +1,5 @@
 name: workspace
-description: Node, pnpm and the installed workspace, with the Prisma client generated.
+description: Node, pnpm and the installed workspace. Installing generates the Prisma client.
 
 runs:
   using: composite
@@ -14,7 +14,4 @@ runs:
         cache: pnpm
 
     - run: pnpm install --frozen-lockfile
-      shell: bash
-
-    - run: pnpm --filter @appname/api prisma:generate
       shell: bash

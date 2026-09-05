@@ -22,7 +22,7 @@ services:
   oidc:
     image: wiremock/wiremock:3.9.1
     restart: unless-stopped
-    command: ['--global-response-templating', '--disable-banner']
+    command: ['--disable-banner']
     ports:
       - '${OIDC_PORT}:8080'
     volumes:

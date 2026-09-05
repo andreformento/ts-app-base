@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Exercises the running docker compose stack over real HTTP, the way a client
-# would. Assumes `make up` has completed.
 set -euo pipefail
 
 API=${API:-http://localhost:3000}
@@ -21,6 +19,11 @@ pass "web proxies /api"
 
 curl -sS "$API/openapi.json" | grep -q '"/spaces"' || fail "openapi served"
 pass "openapi served"
+
+SCHEMA=$(curl -sS "$API/openapi.json")
+printf '%s' "$SCHEMA" | grep -q '"maxLength":80' || fail "openapi publishes the length limits"
+printf '%s' "$SCHEMA" | grep -q '"enum":\["host","guest"\]' || fail "openapi publishes the roles"
+pass "openapi describes the contract the api enforces"
 
 TOKEN=$(curl -sS -i "$OIDC/authorize?redirect_uri=$WEB" | grep -i '^location:' | sed 's/.*id_token=//' | tr -d '\r\n')
 [ -n "$TOKEN" ] || fail "local provider issues a token"
@@ -51,8 +54,12 @@ pass "edit a space"
 pass "anonymous is refused"
 
 [ "$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$API/spaces" -H "authorization: Bearer $ACCESS" \
-  -H 'content-type: application/json' -d '{"name":"  "}')" = '422' ] || fail "invalid input is refused"
+  -H 'content-type: application/json' -d '{"name":"  "}')" = '400' ] || fail "invalid input is refused"
 pass "invalid input is refused"
+
+[ "$(curl -sS -o /dev/null -w '%{http_code}' -X PATCH "$API/spaces/$ID" -H "authorization: Bearer $ACCESS" \
+  -H 'content-type: application/json' -d '{}')" = '422' ] || fail "an empty patch is refused"
+pass "an empty patch is refused"
 
 [ "$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE "$API/spaces/$ID" -H "authorization: Bearer $ACCESS")" = '204' ] \
   || fail "delete a space"

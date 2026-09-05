@@ -1,86 +1,75 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import {
-  PostgreSqlContainer,
-  type StartedPostgreSqlContainer,
-} from '@testcontainers/postgresql';
-import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
+import { randomUUID } from 'node:crypto';
+import { inject } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
-import { AppModule } from '../../src/diplomat/in/app.module.js';
-import { Database } from '../../src/diplomat/out/prisma.js';
-import { IdentityProviderContainer } from './identity-provider.js';
-
-const run = promisify(execFile);
+import { signIdToken } from './identity-provider';
+import { call } from './client';
 
 export const WEB_CLIENT = 'web-client';
 export const MOBILE_CLIENT = 'mobile-client';
 
+export type Signed = {
+  readonly accessToken: string;
+  readonly refreshToken: string;
+  readonly cookies: readonly string[];
+  readonly user: {
+    readonly id: string;
+    readonly email: string;
+    readonly name: string;
+  };
+};
+
+export type TokenClaims = {
+  subject: string;
+  audience: string;
+  issuer?: string;
+  email?: string | null;
+  emailVerified?: boolean;
+  name?: string;
+  expiresInSeconds?: number;
+};
+
 export type Harness = {
   readonly app: INestApplication;
   readonly url: string;
-  readonly identity: IdentityProviderContainer;
-  reset: () => Promise<void>;
-
-  addMember: (
-    spaceId: string,
-    userId: string,
-    role: 'host' | 'guest',
-  ) => Promise<void>;
+  idToken: (claims: TokenClaims) => Promise<string>;
+  signIn: (subject?: string) => Promise<Signed>;
   stop: () => Promise<void>;
 };
 
 export async function startHarness(): Promise<Harness> {
-  const postgres: StartedPostgreSqlContainer = await new PostgreSqlContainer(
-    'postgres:17',
-  ).start();
-  const identity = await IdentityProviderContainer.start();
-  const databaseUrl = postgres.getConnectionUri();
-
-  await run(
-    'node',
-    ['node_modules/prisma/build/index.js', 'migrate', 'deploy'],
-    {
-      env: { ...process.env, DATABASE_URL: databaseUrl },
-    },
-  );
-
-  process.env['DATABASE_URL'] = databaseUrl;
+  process.env['DATABASE_URL'] = inject('databaseUrl');
   process.env['AUTH_SECRET'] = 'a-test-secret-that-is-long-enough-to-pass';
-  process.env['OIDC_JWKS_URL'] = identity.jwksUrl;
-  process.env['OIDC_ISSUER'] = identity.issuer;
+  process.env['OIDC_JWKS_URL'] = inject('jwksUrl');
+  process.env['OIDC_ISSUER'] = inject('issuer');
   process.env['OIDC_AUDIENCES'] = `${WEB_CLIENT},${MOBILE_CLIENT}`;
   process.env['COOKIE_SECURE'] = 'false';
-  process.env['ACCESS_TOKEN_TTL'] = '900';
 
-  const moduleRef = await Test.createTestingModule({
-    imports: [AppModule],
-  }).compile();
-  const app = moduleRef.createNestApplication();
-  app.use(cookieParser());
+  const { createApp } = await import('../../src/app');
+  const app = await createApp();
   await app.init();
   await app.listen(0);
 
-  const url = await app.getUrl();
+  const url = (await app.getUrl()).replace('[::1]', '127.0.0.1');
+  const signingKey = inject('signingKey');
+  const issuer = inject('issuer');
+
+  const idToken: Harness['idToken'] = (claims) =>
+    signIdToken(signingKey, { issuer, ...claims });
 
   return {
     app,
-    url: url.replace('[::1]', '127.0.0.1'),
-    identity,
-    reset: async () => {
-      const db = app.get(Database);
-      await db.$executeRawUnsafe(
-        'TRUNCATE TABLE memberships, sessions, spaces, users RESTART IDENTITY CASCADE',
-      );
-    },
-    addMember: async (spaceId, userId, role) => {
-      const db = app.get(Database);
-      await db.membership.create({ data: { spaceId, userId, role } });
+    url,
+    idToken,
+    signIn: async (subject = randomUUID()) => {
+      const token = await idToken({ subject, audience: WEB_CLIENT });
+      const response = await call<Signed>(url, '/auth/google', {
+        method: 'POST',
+        body: { idToken: token },
+      });
+      return { ...response.body, cookies: response.cookies };
     },
     stop: async () => {
       await app.close();
-      await identity.stop();
-      await postgres.stop();
     },
   };
 }

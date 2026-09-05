@@ -9,7 +9,6 @@ export default defineConfig({
   globalTeardown: './test/e2e/global-teardown.ts',
   fullyParallel: false,
   workers: 1,
-  retries: 0,
   timeout: 60_000,
   reporter:
     process.env['CI'] === undefined
@@ -26,7 +25,7 @@ export default defineConfig({
     command: `pnpm build:e2e && pnpm preview --port ${String(PORT)} --strictPort`,
     url: `http://127.0.0.1:${String(PORT)}`,
     reuseExistingServer: false,
-    timeout: 120_000,
+    timeout: 180_000,
     env: { API_PROXY_TARGET: 'http://127.0.0.1:3001' },
   },
 });

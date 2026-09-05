@@ -1,10 +1,46 @@
+import { GenericContainer, Wait } from 'testcontainers';
+import type { StartedTestContainer } from 'testcontainers';
 import {
-  GenericContainer,
-  type StartedTestContainer,
-  Wait,
-} from 'testcontainers';
-import { SignJWT, exportJWK, generateKeyPair } from 'jose';
+  SignJWT,
+  exportJWK,
+  exportPKCS8,
+  importPKCS8,
+  generateKeyPair,
+} from 'jose';
 import type { CryptoKey } from 'jose';
+
+export async function signIdToken(
+  signingKey: string,
+  claims: {
+    subject: string;
+    audience: string;
+    issuer: string;
+    email?: string | null;
+    emailVerified?: boolean;
+    name?: string;
+    expiresInSeconds?: number;
+  },
+): Promise<string> {
+  const key = await importPKCS8(signingKey, 'RS256');
+  const now = Math.floor(Date.now() / 1000);
+  const payload: Record<string, unknown> = {
+    email:
+      claims.email === undefined
+        ? `${claims.subject}@example.test`
+        : claims.email,
+    email_verified: claims.emailVerified ?? true,
+  };
+  if (claims.name !== undefined) payload['name'] = claims.name;
+
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: 'RS256', kid: 'test-key' })
+    .setSubject(claims.subject)
+    .setIssuer(claims.issuer)
+    .setAudience(claims.audience)
+    .setIssuedAt(now)
+    .setExpirationTime(now + (claims.expiresInSeconds ?? 3600))
+    .sign(key);
+}
 
 export class IdentityProviderContainer {
   private constructor(
@@ -27,12 +63,11 @@ export class IdentityProviderContainer {
 
     const container = await new GenericContainer('wiremock/wiremock:3.9.1')
       .withExposedPorts(8080)
-      .withCommand(['--no-request-journal'])
       .withWaitStrategy(Wait.forHttp('/__admin/mappings', 8080))
       .start();
 
     const base = `http://${container.getHost()}:${String(container.getMappedPort(8080))}`;
-    const response = await fetch(`${base}/__admin/mappings`, {
+    const stubbed = await fetch(`${base}/__admin/mappings`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -40,13 +75,13 @@ export class IdentityProviderContainer {
         response: {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(jwks),
+          jsonBody: jwks,
         },
       }),
     });
-    if (!response.ok)
+    if (!stubbed.ok)
       throw new Error(
-        `Could not stub the JWKS endpoint: ${String(response.status)}`,
+        `Could not stub the JWKS endpoint: ${String(stubbed.status)}`,
       );
 
     return new IdentityProviderContainer(
@@ -62,16 +97,18 @@ export class IdentityProviderContainer {
     audience: string;
     email?: string | null;
     emailVerified?: boolean;
-    name?: string | null;
+    name?: string;
     expiresInSeconds?: number;
     issuer?: string;
   }): Promise<string> {
     const now = Math.floor(Date.now() / 1000);
     const payload: Record<string, unknown> = {
+      email:
+        claims.email === undefined
+          ? `${claims.subject}@example.test`
+          : claims.email,
       email_verified: claims.emailVerified ?? true,
     };
-    if (claims.email !== undefined) payload['email'] = claims.email;
-    else payload['email'] = `${claims.subject}@example.test`;
     if (claims.name !== undefined) payload['name'] = claims.name;
 
     return new SignJWT(payload)
@@ -100,6 +137,10 @@ export class IdentityProviderContainer {
       .setIssuedAt(now)
       .setExpirationTime(now + 3600)
       .sign(privateKey);
+  }
+
+  async exportSigningKey(): Promise<string> {
+    return exportPKCS8(this.privateKey);
   }
 
   async stop(): Promise<void> {

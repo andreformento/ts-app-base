@@ -12,8 +12,8 @@ One paragraph. What the product does, for whom, and what makes it different.
 
 ## Core concepts
 
-The nouns that appear in the code. Name them here once, and keep those names in
-`model/` — a concept renamed in conversation but not in code is how drift
+The nouns that appear in the code. Name them here once and keep those names in
+the code — a concept renamed in conversation but not in code is how drift
 starts.
 
 - **Concept** — what it means, and what it is NOT.

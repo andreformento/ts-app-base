@@ -1,4 +1,5 @@
-import { startStack, type Stack } from './stack.js';
+import { startStack } from './stack';
+import type { Stack } from './stack';
 
 declare global {
   var __stack__: Stack | undefined;

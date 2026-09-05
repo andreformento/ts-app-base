@@ -4,105 +4,73 @@ Two tiers. Nothing between them.
 
 ## The mock ban
 
-**Mocks are prohibited in every tier, without exception.** No `vi.mock`, no
-stub objects, no hand-written in-process fakes, no dependency substitution
-through the Nest DI container.
+**No mocks, in any tier.** No `vi.mock`, no stub objects, no fake repositories,
+no `jest.fn`. Lint rejects those calls.
 
-If a test seems to need a mock, the code under test is in the wrong layer. Move
-the decision into a pure function in `logic` and unit-test it there; leave the
-I/O in `diplomat`, where e2e covers it.
+The ban is only affordable because of the rules convention: anything worth
+testing in isolation is a pure function, and a pure function needs no mock. If
+a test seems to need one, the logic is in the wrong place — move the decision
+into `<feature>.rules.ts` and leave the I/O in the service.
 
 ## Tier 1 — unit
 
-Covers `logic/` and `adapter/` only. Both are pure, so a mock is never needed.
-
-    logic/<feature>.spec.ts     REQUIRED alongside every logic file
-    adapter/**/<name>.spec.ts   REQUIRED alongside every adapter file
-
-Pure means: same input, same output, no I/O, no clock, no randomness, no
-state. A function needing the current time takes `now: Date` as a parameter.
-
-Adapters are the trusted boundary — `model` carries no runtime validation, so a
-mis-mapped field is caught only here. Test every field, both directions.
+Covers `*.rules.ts` and the pure helpers in `apps/web/src/lib`. Pure means:
+same input, same output, no I/O, no clock, no randomness. A function that needs
+the time takes `now: Date` as a parameter.
 
     pnpm test
 
 ## Tier 2 — e2e
 
-Covers everything else: `application/`, `diplomat/in`, `diplomat/out`, and the
-wiring between them. All orchestration and I/O correctness rides on this tier.
-That is the deliberate price of banning mocks.
+Covers everything else: controllers, services, guards, Prisma, the browser.
 
-An e2e test boots the real application and calls its real HTTP endpoints. It
-never imports an internal function to call it directly.
+The containers start **once per run**, in `test/e2e/global-setup.ts`, and every
+spec file shares them. Each file boots its own application with `createApp()` —
+the same function `main.ts` uses — and calls it over real HTTP. Every external
+dependency is a real container:
 
-Every external dependency runs as a real Docker container via Testcontainers:
+| Dependency                          | Container                                                    |
+| ----------------------------------- | ------------------------------------------------------------ |
+| Database                            | the real `postgres` image                                    |
+| OpenID provider                     | a WireMock container serving a JWKS whose key the test holds |
+| A third party with a runnable image | that image                                                   |
+| A third party without one           | a WireMock container                                         |
 
-| Dependency                              | Container                       |
-| --------------------------------------- | ------------------------------- |
-| Database                                | the real `postgres` image       |
-| Object storage                          | the real `minio` image (S3 API) |
-| Third party publishing a runnable image | that image                      |
-| Third party publishing none             | a WireMock container            |
-
-WireMock is permitted and is not a violation of the mock ban: it is a real
-process answering real HTTP over a real socket. The app's own HTTP client,
-serialization and error handling all execute. Nothing is patched in process.
-It is also the only way to exercise 500s and timeouts on demand.
-
-Requires a running Docker daemon.
+WireMock is not a violation of the ban: it is a real process answering real
+HTTP over a real socket, so the app's own client, serialization and error
+handling all execute. Nothing is patched in process.
 
     pnpm test:e2e        api
     pnpm test:e2e:web    browser
 
-To run one file or one test, see `docs/STRUCTURE.md` § Commands.
+**The OpenAPI document is checked in the stack tier, not in e2e.** The
+`@nestjs/swagger` CLI plugin infers schemas during `nest build`, and the e2e
+suite runs through vitest and swc, where the plugin never runs — so e2e sees a
+poorer document than production serves. `scripts/smoke-stack.sh` asserts it
+against the built image instead. E2E still checks that every route appears,
+which comes from the decorators and is present either way.
 
-## Tier 2 in the browser — frontend e2e
+**A test never writes to the database.** It signs in and calls endpoints, like
+any client. If a test needs state the API cannot yet produce — a guest, say —
+that is a missing endpoint, not a reason to reach for Prisma. Migrations are
+the only thing applied directly.
 
-The web app is tested the same way the api is: against reality. The browser
-drives the real production bundle, which calls a real api, which talks to a
-real database — all in containers.
+**Every test creates its own identity.** `harness.signIn()` mints a fresh
+subject, so tests share a database without sharing data. Nothing is truncated
+between tests, and files run in parallel because there is no shared state to
+protect. The cost: a test cannot assert on the database as a whole — no
+"exactly one space exists" — which is a constraint worth having.
 
-**Route interception is mocking and is banned.** No `page.route()` stubbing of
-our own API, no fixture responses, no service-worker fakes. If the frontend
-needs data, create it through the real API.
+The browser suite drives the **production bundle** against a real api. Route
+interception is mocking and is banned — if a test needs data, it creates it
+through the real API. Offline is simulated with Playwright's own
+`context.setOffline(true)`, which cuts the network at the driver level.
 
-Setup, per run:
+Selectors are user-visible only: text, roles, labels. Never a CSS class.
 
-    postgres container  ->  real database, migrated
-    api container       ->  the real api image
-    web                 ->  the PRODUCTION build (`vite build` + preview),
-                            never the dev server
-    OAuth               ->  a containerized mock-oauth2 server image
-                            (a real image, so it is permitted; see the table above)
+## What to write for a feature
 
-Rules:
-
-- Tests drive the UI as a user does: visible text, roles and labels. Never a
-  CSS class or a test-only DOM hook that users cannot see.
-- Test data is created through the real API, never by writing to the database.
-- Web-first assertions only. No fixed sleeps — wait for state, not for time.
-- Every test is independent and can run in parallel against its own data.
-- Failures produce a trace, a screenshot and a video.
-- Accessibility is asserted in-test (axe): the CRUD form must be operable by
-  keyboard and its errors announced.
-- Offline is simulated with Playwright's own `context.setOffline(true)`, which
-  cuts the browser's network at the driver level. That is NOT mocking: nothing
-  in the app is patched, and the app's real offline path runs. Faking the
-  service worker or intercepting routes to simulate offline remains banned.
-- The same suite runs in CI, against the same containers.
-
-**There are no component tests.** Components are `diplomat/in` and hold no
-logic, so there is nothing to unit-test in them — and a component test would
-immediately require mocking the data layer, which is banned. Anything decidable
-belongs in `logic`, where it is unit-tested without a browser.
-
-## What to write for a new feature
-
-- A `.spec.ts` beside every `logic` and `adapter` file. Not optional.
-- At least one e2e test per endpoint, covering the success path and each
-  error path the endpoint can return.
-- For a user-facing feature, a browser e2e covering the flow a user performs,
-  including its failure and offline states.
-
-No test file is written for `model`, `wire`, `application` or `diplomat`.
+- A `.spec.ts` beside every `*.rules.ts`. Not optional.
+- One e2e per endpoint, covering the success path and each failure it can
+  return.
+- For a user-facing feature, a browser e2e over the flow, with an axe check.

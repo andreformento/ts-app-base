@@ -36,5 +36,5 @@ export async function call<T>(
 }
 
 export function cookieHeader(cookies: readonly string[]): string {
-  return cookies.map((c) => c.split(';')[0]).join('; ');
+  return cookies.map((cookie) => cookie.split(';')[0]).join('; ');
 }

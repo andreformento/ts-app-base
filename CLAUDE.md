@@ -1,79 +1,67 @@
 # appname — agent entrypoint
 
-Read this first. It is the index; the rules live in `docs/`.
+Read this first, then `PRODUCT.md` for what to build.
 
-The technical base is implemented: layers, strict TypeScript, lint-enforced
-import boundaries, OpenID login, a worked CRUD feature, and both test tiers
-against real containers. Follow the docs; the code already does.
-
-`Space` is an EXAMPLE feature, present to show every layer working end to end.
-Replace it with the product's own domain when the shape is clear.
-
-## What this is
-
-`PRODUCT.md` — what the product is and which product decisions are settled.
-Read it before designing a feature; do not relitigate what it records. If it is
-still the stub, ask what to build rather than inventing it.
-
-This file and `docs/` — how the code is built. Product intent comes from
-`PRODUCT.md`; everything technical comes from here.
+This project follows its frameworks. NestJS is used the way the NestJS docs use
+it; React the way React is normally written. There is no custom architecture to
+learn — the rules below are the few places we deviate or decide.
 
 ## Documents
 
-| File                   | Contents                                                                                |
-| ---------------------- | --------------------------------------------------------------------------------------- |
-| `docs/ARCHITECTURE.md` | The layers, the import matrix, framework containment. **Read before writing any code.** |
-| `docs/STRUCTURE.md`    | Repo layout, file and symbol naming, commands                                           |
-| `docs/TESTING.md`      | The two test tiers and the mock ban                                                     |
-| `docs/STACK.md`        | Every dependency and why it is there                                                    |
-| `docs/DEPLOY.md`       | Build outputs. Target host is an open decision                                          |
-| `docs/DECISIONS.md`    | Settled decisions with rejected alternatives. Do not relitigate                         |
+| File                | Contents                                             |
+| ------------------- | ---------------------------------------------------- |
+| `PRODUCT.md`        | What the product is. Read before designing a feature. If it is still the stub, ask rather than invent |
+| `docs/STRUCTURE.md` | Where files go, commands, the local stack            |
+| `docs/TESTING.md`   | The two tiers and the mock ban                       |
+| `docs/DECISIONS.md` | Settled decisions and rejected alternatives          |
+| `docs/DEPLOY.md`    | Build outputs. The host is an open decision          |
 
-## Non-negotiables
+## The rules
 
-1. **Layers.** `model` / `logic` / `wire` / `adapter` / `application` /
-   `diplomat` in both apps. The import matrix in `docs/ARCHITECTURE.md` is
-   lint-enforced. Never introduce a layer, and never bypass one.
-2. **No mocks. Anywhere.** No `vi.mock`, no stub objects, no in-process fakes,
-   in any tier. If code needs a mock it is in the wrong layer.
-3. **Purity.** `logic` and `adapter` are pure and carry mandatory unit tests.
-   Everything impure is covered only by e2e against the real running app with
-   real Docker containers.
-4. **One trust boundary.** Unknown data is parsed with Zod at `wire/in` and
-   nowhere else. Database rows are the single documented exception.
-5. **Maximum TypeScript strictness.** No `any`, no `@ts-ignore`, no non-null
-   assertion, no unchecked cast. Fix the type, do not silence the compiler.
-6. **The pure core is framework-free.** No `@nestjs/*` in `model`, `logic`,
-   `wire` or `adapter`. No file is named `*.controller.ts` or `*.service.ts`.
-7. **Every internal type lives in `model`**, every external schema in `wire`.
-   No other layer declares a type of its own.
-8. **No comments in code.** Names and types carry the meaning; `docs/` carries
+1. **No mocks, in any tier.** Not `vi.mock`, not a stub object, not a fake
+   repository. Lint rejects the calls.
+2. **Business rules the framework cannot express** are pure functions in
+   `<feature>.rules.ts`, unit-tested exhaustively. Services do I/O and
+   orchestration and are covered only by e2e against real containers. This is
+   what makes rule 1 survivable.
+3. **Do not test what the compiler proves.** A mapper returning an object
+   literal cannot carry an undeclared field — that is `error TS2353`, not a
+   test. Test decisions, not shapes.
+4. **Maximum TypeScript strictness.** No `any`, no `@ts-ignore`, no non-null
+   assertion, no unchecked cast. Fix the type.
+5. **No comments in code.** Names and types carry the meaning; `docs/` carries
    the rationale.
+6. **Validation happens at the edge**, through DTOs and the global
+   `ValidationPipe`. Limits and trimming are decorators, not code — a
+   hand-written check duplicates the DTO and never reaches the OpenAPI
+   document. A service receives data that is already the right shape.
+7. **Authorization is a guard.** A space-scoped route declares `@RequiresRole`
+   and `SpaceRoleGuard` enforces it; a service never checks a role. Name the
+   route parameter `id` or `spaceId` or the guard will not see it.
+8. **Errors are Nest's.** Throw `ForbiddenException`, `UnprocessableEntityException`
+   and friends. Do not invent an error envelope.
 
-## Adding a feature
+## Adding a feature to the api
 
-Get the product intent from `PRODUCT.md`, then follow the ordered file list in
-`docs/ARCHITECTURE.md` § Adding a feature. It tells you every file to create,
-in order, including the tests. Do not skip the tests.
+```
+nest g resource <name>          # or copy src/spaces
+```
 
-## What is checked for you
+Then, in order:
 
-`pnpm lint` enforces the import matrix, the framework boundaries, the type
-discipline, the comment ban, the mock ban, where types may be declared, and
-that every pure file has a test. It also asserts those checks still fire, since
-they once passed while matching nothing.
-
-What it CANNOT check — see `docs/ARCHITECTURE.md` § What enforces what — is
-whether a `logic` function is truly pure, whether a test is meaningful, and
-whether a business rule has been hidden in `application`. Those are on you.
+1. `<name>.rules.ts` + `.spec.ts` — the rules, pure, tested first
+2. `dto/` — what may enter, `class-validator` decorators, types only
+3. `entities/` — what may leave. Plain classes, no decorators
+4. `<name>.mapper.ts` — row to entity, built as an object literal so the
+   compiler rejects any undeclared field. No test unless it makes a decision
+5. `<name>.service.ts` — I/O and orchestration, calling the rules and the mapper
+6. `<name>.controller.ts` — routes, thin
+7. `test/e2e/<name>.e2e-spec.ts` — every endpoint, success and failure
 
 ## Commands
 
     pnpm dev            api :3000, web :5173
-    make run            whole stack in docker compose
+    make up             whole stack in docker, prints the urls
     make test           everything CI runs
 
-`docs/STRUCTURE.md` § Commands is canonical and covers narrowing the loop to a
-single test file, plus the database workflow.
-
-CI gates on typecheck, lint, unit, api e2e and browser e2e. All must pass.
+`docs/STRUCTURE.md` is canonical for commands and the database workflow.
