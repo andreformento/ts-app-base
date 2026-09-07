@@ -1,7 +1,12 @@
-import { messageOf } from './space.rules';
-import type { Space, User } from '../types/space';
-
-const BASE = '/api';
+import createClient from 'openapi-fetch';
+import type { paths } from '../types/api';
+import type {
+  CreateSpace,
+  Failure,
+  Space,
+  UpdateSpace,
+  User,
+} from '../types/space';
 
 export class ApiError extends Error {
   constructor(
@@ -13,40 +18,69 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(
-  path: string,
-  init: { method?: string; body?: unknown } = {},
-): Promise<T> {
-  const response = await fetch(`${BASE}${path}`, {
-    method: init.method ?? 'GET',
-    credentials: 'include',
-    headers: { 'content-type': 'application/json' },
-    ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
-  });
+const client = createClient<paths>({
+  baseUrl: '/api',
+  credentials: 'include',
+});
 
-  const text = await response.text();
-  const payload: unknown = text.length === 0 ? null : JSON.parse(text);
+export function messageOf(
+  failure: Failure,
+  fallback = 'Something went wrong.',
+): string {
+  const message = Array.isArray(failure.message)
+    ? failure.message.join('; ')
+    : failure.message;
+  return message.length === 0 ? fallback : message;
+}
 
-  if (!response.ok) throw new ApiError(response.status, messageOf(payload));
-  return payload as T;
+function refused(response: Response, failure: Failure): ApiError {
+  return new ApiError(response.status, messageOf(failure));
 }
 
 export const api = {
-  signIn: (idToken: string) =>
-    request<{ user: User }>('/auth/google', {
-      method: 'POST',
-      body: { idToken },
-    }),
-  signOut: () =>
-    request<{ ok: true }>('/auth/logout', { method: 'POST', body: {} }),
-  me: () => request<User>('/auth/me'),
-  listSpaces: () => request<Space[]>('/spaces'),
-  createSpace: (input: { name: string; description: string | null }) =>
-    request<Space>('/spaces', { method: 'POST', body: input }),
-  updateSpace: (
-    id: string,
-    input: { name?: string; description?: string | null },
-  ) => request<Space>(`/spaces/${id}`, { method: 'PATCH', body: input }),
-  deleteSpace: (id: string) =>
-    request<null>(`/spaces/${id}`, { method: 'DELETE' }),
+  signIn: async (idToken: string): Promise<{ user: User }> => {
+    const result = await client.POST('/auth/google', { body: { idToken } });
+    if (result.error !== undefined)
+      throw refused(result.response, result.error);
+    return result.data;
+  },
+  signOut: async (): Promise<void> => {
+    const result = await client.POST('/auth/logout', { body: {} });
+    if (result.error !== undefined)
+      throw refused(result.response, result.error);
+  },
+  me: async (): Promise<User> => {
+    const result = await client.GET('/auth/me');
+    if (result.error !== undefined)
+      throw refused(result.response, result.error);
+    return result.data;
+  },
+  listSpaces: async (): Promise<Space[]> => {
+    const result = await client.GET('/spaces');
+    if (result.error !== undefined)
+      throw refused(result.response, result.error);
+    return result.data;
+  },
+  createSpace: async (input: CreateSpace): Promise<Space> => {
+    const result = await client.POST('/spaces', { body: input });
+    if (result.error !== undefined)
+      throw refused(result.response, result.error);
+    return result.data;
+  },
+  updateSpace: async (id: string, input: UpdateSpace): Promise<Space> => {
+    const result = await client.PATCH('/spaces/{id}', {
+      params: { path: { id } },
+      body: input,
+    });
+    if (result.error !== undefined)
+      throw refused(result.response, result.error);
+    return result.data;
+  },
+  deleteSpace: async (id: string): Promise<void> => {
+    const result = await client.DELETE('/spaces/{id}', {
+      params: { path: { id } },
+    });
+    if (result.error !== undefined)
+      throw refused(result.response, result.error);
+  },
 };

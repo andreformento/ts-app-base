@@ -1,8 +1,8 @@
-import 'reflect-metadata';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Home } from './routes/home';
+import { RouterProvider } from '@tanstack/react-router';
+import { router } from './router';
 import './index.css';
 
 const root = document.getElementById('root');
@@ -15,7 +15,7 @@ const queryClient = new QueryClient({
 createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <Home />
+      <RouterProvider router={router} />
     </QueryClientProvider>
   </StrictMode>,
 );

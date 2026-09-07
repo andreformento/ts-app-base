@@ -1,17 +1,8 @@
-export type Role = 'host' | 'guest';
+import type { components } from './api';
 
-export type Space = {
-  id: string;
-  name: string;
-  description: string | null;
-  role: Role;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type User = {
-  id: string;
-  email: string;
-  name: string;
-  pictureUrl: string | null;
-};
+export type Space = components['schemas']['SpaceEntity'];
+export type User = components['schemas']['UserEntity'];
+export type Role = Space['role'];
+export type Failure = components['schemas']['FailureEntity'];
+export type CreateSpace = components['schemas']['CreateSpaceDto'];
+export type UpdateSpace = components['schemas']['UpdateSpaceDto'];

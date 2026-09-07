@@ -35,14 +35,15 @@ done
 cat > README.md <<EOF
 # ${NAME}
 
-A TypeScript monorepo: a NestJS api and a React PWA, sharing one hexagonal
-layer scheme whose boundaries are enforced by lint rather than by convention.
+A TypeScript monorepo: a NestJS api and a React PWA, written the way each
+framework is normally written, tested against real containers with no mocks.
 
 - \`apps/api\` — NestJS, Postgres, Prisma
-- \`apps/web\` — React, Vite, PWA
+- \`apps/web\` — React, Vite, TanStack Query and Router, PWA
 
-Rules live in \`CLAUDE.md\` and \`docs/\`. They are normative: the import
-matrix, type discipline and test tiers are enforced by tooling and CI.
+Rules live in \`CLAUDE.md\` and \`docs/\`. They describe the code and are kept
+in step with it: type discipline, the mock ban and the test tiers are enforced
+by tooling and CI.
 
 ## Requirements
 
@@ -51,7 +52,7 @@ Node >= 22.12, pnpm 10 (\`corepack enable\`), Docker.
 ## Running
 
 \`\`\`sh
-make run          # builds, starts in the background, prints the urls
+make up           # builds, starts in the background, prints the urls
 \`\`\`
 
 The stack includes a local identity provider, so sign-in works with no external
@@ -69,12 +70,13 @@ pnpm dev          # api on :3000, web on :5173
 
 \`\`\`sh
 pnpm typecheck
-pnpm lint         # includes proof that the import matrix is enforced
-pnpm test         # unit: logic/ and adapter/, no mocks
+pnpm lint
+pnpm test         # unit: the pure rules, no mocks
 pnpm test:e2e     # api against real containers
 pnpm test:e2e:web # browser against the real stack
 make test         # all of the above, as CI runs it
 make smoke        # exercise the running stack over real HTTP
+make openapi      # re-emit the api document and the web's generated types
 \`\`\`
 
 Every external dependency in a test is a real Docker container. There are no

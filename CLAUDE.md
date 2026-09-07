@@ -8,13 +8,15 @@ learn — the rules below are the few places we deviate or decide.
 
 ## Documents
 
-| File                | Contents                                             |
-| ------------------- | ---------------------------------------------------- |
-| `PRODUCT.md`        | What the product is. Read before designing a feature |
-| `docs/STRUCTURE.md` | Where files go, commands, the local stack            |
-| `docs/TESTING.md`   | The two tiers and the mock ban                       |
-| `docs/DECISIONS.md` | Why the code is as it is, and what was rejected      |
-| `docs/DEPLOY.md`    | Build outputs. The host is an open decision          |
+| File                  | Contents                                             |
+| --------------------- | ---------------------------------------------------- |
+| `PRODUCT.md`          | What the product is. Read before designing a feature |
+| `docs/STRUCTURE.md`   | Where files go, commands, the local stack            |
+| `docs/FEATURE-API.md` | How to add a feature to `apps/api`                   |
+| `docs/FEATURE-WEB.md` | How to add a feature to `apps/web`                   |
+| `docs/TESTING.md`     | The two tiers and the mock ban                       |
+| `docs/DECISIONS.md`   | Why the code is as it is, and what was rejected      |
+| `docs/DEPLOY.md`      | Build outputs. The host is an open decision          |
 
 ## Changing the project
 
@@ -42,21 +44,36 @@ Make the change and rewrite the rule.
    assertion, no unchecked cast. Fix the type.
 5. **No comments in code.** Names and types carry the meaning; `docs/` carries
    the rationale.
-6. **Validation happens at the edge**, through DTOs and the global
-   `ValidationPipe`. Limits and trimming are decorators, not code — a
+6. **Validation happens at the edge.** In the api that edge is a DTO plus the
+   global `ValidationPipe`: limits and trimming are decorators, not code — a
    hand-written check duplicates the DTO and never reaches the OpenAPI
-   document. A service receives data that is already the right shape.
+   document, and a service receives data that is already the right shape. In
+   the web the edge is the form, and the rule is its framework's:
+   `react-hook-form` register rules. The web does not import `class-validator`.
 7. **Authorization is a guard.** A space-scoped route declares `@RequiresRole`
    and `SpaceRoleGuard` enforces it; a service never checks a role. Name the
    route parameter `id` or `spaceId` or the guard will not see it.
 8. **Errors are Nest's.** Throw `ForbiddenException`, `UnprocessableEntityException`
    and friends. Do not invent an error envelope.
+9. **The web does not hand-write what crosses the network.**
+   `apps/web/src/types/api.ts` is generated from `apps/api/openapi.json`, and
+   the client is `openapi-fetch` typed by it — so no response is asserted. Both
+   files are committed; run `make openapi` after changing a route, dto or
+   entity, or CI fails.
 
-## Adding a feature to the api
+## Adding a feature
 
-`docs/FEATURE.md` is the procedure: routes, the decorators and their
+Two procedures, one per app. A feature that crosses both is the api one first,
+then `make openapi`, then the web one.
+
+**`docs/FEATURE-API.md`** — `apps/api`: routes, the decorators and their
 signatures, how to obtain the caller, the ordered file list, and how to write
 the e2e. `src/spaces` and `src/invites` are the worked examples.
+
+**`docs/FEATURE-WEB.md`** — `apps/web`: the ordered file list, the shape of a
+client method, the cache keys and when to be optimistic, forms, the `Field`
+contract, and what the browser tier covers. `src/features/spaces` is the worked
+example.
 
 ## Commands
 

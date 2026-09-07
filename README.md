@@ -18,6 +18,11 @@ Use it with **Use this template**, then run one command to name your project.
 - **OpenID login** issuing your own rotating tokens, accepted from a bearer
   header or a cookie behind one code path, with immediate revocation.
 - **Role authorization as a guard**, declared per route.
+- **The web's api types are generated** from the document the api publishes, and
+  its client is `openapi-fetch`, so no response is cast and a renamed field is a
+  build error. `make openapi-check` fails when the committed files go stale.
+- **Typed routing** with TanStack Router: route params and search params are
+  checked by the compiler, not read out of a loose record.
 - **No mocks, in any tier.** Postgres and the identity provider are real
   containers; no test makes an external request.
 - **A local stack** built from Dockerfiles, healthy in about twenty seconds.

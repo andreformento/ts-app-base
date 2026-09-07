@@ -20,13 +20,18 @@ Conventional Nest. One directory per feature, each a module.
       main.ts                bootstrap and SIGTERM handling
       app.ts                 createApp(), used by main and by the e2e harness
       app.module.ts          root module
+      openapi.ts             the document both the served /docs and the emit use
+      failure.entity.ts      Nest's error envelope, the document's default response
+      emit-openapi.ts        writes openapi.json from the built app
       config/environment.ts  env DTO, validated by ConfigModule at boot
       prisma/                PrismaModule and PrismaService (global)
       auth/                  controller, service, rules, jwt strategy, guard
       memberships/           membership.rules.ts, memberships.service.ts,
                              space-role.guard.ts and its two decorators
       spaces/                controller, service, rules, mapper, dto, entities
+      invites/               controller, service, rules, mapper, dto, entities
       health/                readiness
+    openapi.json             emitted, committed, the web generates from it
     prisma/schema.prisma     database schema and migrations
     test/e2e/                harness plus one spec per feature
 
@@ -41,7 +46,7 @@ a compile error rather than a leak. Never spread a row into it: `{ ...row }`
 compiles and leaks. It carries **no test** unless it makes a decision — the
 compiler already proves the shape.
 
-`docs/FEATURE.md` has the full procedure and the signatures.
+`docs/FEATURE-API.md` has the full procedure and the signatures.
 
 ## apps/web
 
@@ -56,13 +61,18 @@ follow and avoids the case-only renames that break on a case-insensitive
 filesystem.
 
     src/
-      main.tsx               entry, providers
+      main.tsx               entry, providers, RouterProvider
+      router.tsx             the route tree, search-param validation, not-found
       routes/                one component per screen
       features/<name>/       components and hooks for that feature
       components/ui/         shared presentational components
       lib/                   api client, pure helpers, their tests
-      types/                 shared types
+      types/api.ts           generated from apps/api/openapi.json, committed
+      types/space.ts         re-exports the entity types from types/api.ts
     test/e2e/                Playwright specs and the stack they run against
+
+`docs/FEATURE-WEB.md` has the full procedure: the client's shape, the cache
+keys, forms, the `Field` contract and what the browser tier covers.
 
 ## Commands
 
@@ -75,6 +85,9 @@ filesystem.
     make smoke          exercise the running stack over real HTTP
     make down           stop it
     make clean          stop it and drop the database volume
+
+    make openapi        re-emit apps/api/openapi.json and the web's types
+    make openapi-check  the same, and fail if either file was stale
 
     pnpm typecheck
     pnpm lint

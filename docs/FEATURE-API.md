@@ -72,13 +72,17 @@ does not take one merely to look a role up — that is the guard's job.
    `pnpm --filter @appname/api prisma:migrate`
 2. `<name>.rules.ts` + `.spec.ts` — pure rules, tested first
 3. `dto/` — `class-validator` decorators. Limits and trimming belong here
-4. `entities/` — plain classes, no decorators
+4. `entities/` — plain classes, no decorators; the plugin infers the schema.
+   The api's one `@ApiProperty` is in `src/failure.entity.ts` — do not add
+   another
 5. `<name>.mapper.ts` — object literal, never a spread. Add the plural form
 6. `<name>.service.ts` — I/O and orchestration
 7. `<name>.controller.ts` — thin, guarded
 8. `<name>.module.ts` — **and register it in `src/app.module.ts`**
 9. `test/e2e/<name>.e2e-spec.ts`
-10. If the feature adds a route a client depends on, add an assertion to
+10. `make openapi` — re-emits `apps/api/openapi.json` and regenerates
+    `apps/web/src/types/api.ts`. Commit both; CI fails when they are stale
+11. If the feature adds a route a client depends on, add an assertion to
     `scripts/smoke-stack.sh`, which runs against the built image
 
 ## Writing the e2e

@@ -41,8 +41,9 @@ you are about to build on it.
 
 `pnpm typecheck` fails when a mapper returns a field the entity does not
 declare. `pnpm lint` fails on `any`, a silenced compiler error, a comment in
-code, or a mocking call.
+code, or a mocking call. `make openapi-check`, which CI runs, fails when the
+api's committed OpenAPI document or the web's generated types are stale.
 
-Everything else rests on judgement, and `CLAUDE.md` states it in seven rules.
+Everything else rests on judgement, and `CLAUDE.md` states it in nine rules.
 The one worth repeating: put a business rule in `<feature>.rules.ts` where it is
 pure and tested, not inside a service where only e2e can reach it.

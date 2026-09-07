@@ -99,3 +99,14 @@ async function createSpace(page: Page, name: string): Promise<void> {
   await page.getByRole('button', { name: 'Create space' }).click();
   await expect(page.getByText(name, { exact: true })).toBeVisible();
 }
+
+test('an unknown address offers a way back', async ({ page }) => {
+  await page.goto('/nowhere');
+
+  await expect(
+    page.getByRole('heading', { name: 'This page does not exist' }),
+  ).toBeVisible();
+
+  await page.getByRole('link', { name: 'Go to your spaces' }).click();
+  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+});

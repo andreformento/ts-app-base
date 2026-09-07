@@ -1,4 +1,4 @@
-.PHONY: env up down stop clean logs ps smoke test
+.PHONY: env up down stop clean logs ps smoke test openapi openapi-check
 
 COMPOSE := docker compose $(COMPOSE_FILES)
 
@@ -25,6 +25,13 @@ ps:
 
 smoke:
 	./scripts/smoke-stack.sh
+
+openapi:
+	pnpm --filter @appname/api run openapi
+	pnpm --filter @appname/web run codegen
+
+openapi-check: openapi
+	git diff --exit-code -- apps/api/openapi.json apps/web/src/types/api.ts
 
 test:
 	pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e && pnpm test:e2e:web

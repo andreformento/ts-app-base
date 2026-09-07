@@ -87,3 +87,10 @@ excess-property check.
 - One e2e per endpoint, covering the success path and each failure it can
   return.
 - For a user-facing feature, a browser e2e over the flow, with an axe check.
+- Nothing for a React component. Tier 1 covers the pure helpers in
+  `apps/web/src/lib` only; `@testing-library/react` is not a dependency and is
+  not to be added. A component is covered by the browser tier against the real
+  stack, which the mock ban makes the only honest option.
+- Nothing for the web's api types: they are generated from the api's OpenAPI
+  document, and `make openapi-check` — a CI step — fails when the committed
+  files are stale. See `docs/DECISIONS.md` § The web's api types are generated.

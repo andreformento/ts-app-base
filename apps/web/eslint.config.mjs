@@ -15,6 +15,7 @@ export default tseslint.config(
       'vitest.config.ts',
       'playwright.config.ts',
       'test/e2e/**',
+      'src/types/api.ts',
     ],
   },
   eslint.configs.recommended,

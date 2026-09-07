@@ -1,19 +1,20 @@
 import { useEffect, useRef } from 'react';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useSignIn } from './use-session';
 
 export function SignIn() {
   const signIn = useSignIn();
+  const navigate = useNavigate({ from: '/' });
+  const { id_token: token } = useSearch({ from: '/' });
   const attempted = useRef(false);
 
   useEffect(() => {
-    if (attempted.current) return;
-    const token = new URLSearchParams(window.location.search).get('id_token');
-    if (token === null) return;
+    if (attempted.current || token === undefined) return;
 
     attempted.current = true;
-    window.history.replaceState({}, '', window.location.pathname);
+    void navigate({ search: {}, replace: true });
     signIn.mutate(token);
-  }, [signIn]);
+  }, [navigate, signIn, token]);
 
   const env = import.meta.env as Record<string, string | undefined>;
   const authorizeUrl = env['VITE_OIDC_AUTHORIZE_URL'] ?? '';

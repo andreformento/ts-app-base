@@ -1,9 +1,10 @@
-import { classValidatorResolver } from '@hookform/resolvers/class-validator';
 import { useForm } from 'react-hook-form';
 import { Field } from '../../components/ui/field';
-import { SpaceFormDto } from './space-form.dto';
+import { DESCRIPTION_MAX, NAME_MAX } from '../../lib/space.rules';
 import { useCreateSpace, useUpdateSpace } from './use-spaces';
 import type { Space } from '../../types/space';
+
+type SpaceFormValues = { name: string; description: string };
 
 export function SpaceForm({
   editing,
@@ -16,8 +17,7 @@ export function SpaceForm({
   const update = useUpdateSpace();
   const pending = create.isPending || update.isPending;
 
-  const form = useForm<SpaceFormDto>({
-    resolver: classValidatorResolver(SpaceFormDto),
+  const form = useForm<SpaceFormValues>({
     defaultValues: {
       name: editing?.name ?? '',
       description: editing?.description ?? '',
@@ -54,7 +54,18 @@ export function SpaceForm({
       </h2>
 
       <Field label="Name" error={form.formState.errors.name?.message}>
-        {(props) => <input {...props} {...form.register('name')} />}
+        {(props) => (
+          <input
+            {...props}
+            {...form.register('name', {
+              required: 'Name is required.',
+              maxLength: {
+                value: NAME_MAX,
+                message: `Name must be at most ${String(NAME_MAX)} characters.`,
+              },
+            })}
+          />
+        )}
       </Field>
 
       <Field
@@ -62,7 +73,16 @@ export function SpaceForm({
         error={form.formState.errors.description?.message}
       >
         {(props) => (
-          <textarea rows={3} {...props} {...form.register('description')} />
+          <textarea
+            rows={3}
+            {...props}
+            {...form.register('description', {
+              maxLength: {
+                value: DESCRIPTION_MAX,
+                message: `Description must be at most ${String(DESCRIPTION_MAX)} characters.`,
+              },
+            })}
+          />
         )}
       </Field>
 

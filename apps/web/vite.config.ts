@@ -13,7 +13,7 @@ const proxy = {
 
 export default defineConfig({
   plugins: [
-    react({ tsDecorators: true }),
+    react(),
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
