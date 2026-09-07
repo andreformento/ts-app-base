@@ -47,6 +47,14 @@ compiler already proves the shape.
 
 Conventional React.
 
+**Every file is kebab-case**, in both apps — `space-form.tsx`, not
+`SpaceForm.tsx`. The export inside stays PascalCase because JSX requires it:
+`space-form.tsx` exports `SpaceForm`. React codebases often name component
+files after the component, which is a perfectly good convention, but it means
+two rules in one directory and a third one in the api. One rule is easier to
+follow and avoids the case-only renames that break on a case-insensitive
+filesystem.
+
     src/
       main.tsx               entry, providers
       routes/                one component per screen

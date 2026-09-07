@@ -1,6 +1,6 @@
 import { classValidatorResolver } from '@hookform/resolvers/class-validator';
 import { useForm } from 'react-hook-form';
-import { Field } from '../../components/ui/Field';
+import { Field } from '../../components/ui/field';
 import { SpaceFormDto } from './space-form.dto';
 import { useCreateSpace, useUpdateSpace } from './use-spaces';
 import type { Space } from '../../types/space';

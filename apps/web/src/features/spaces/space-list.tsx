@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { mayManage, roleLabel } from '../../lib/space.rules';
-import { SpaceForm } from './SpaceForm';
+import { SpaceForm } from './space-form';
 import { useDeleteSpace, useSpaces } from './use-spaces';
 import type { Space } from '../../types/space';
 

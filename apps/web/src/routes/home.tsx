@@ -1,6 +1,6 @@
-import { SignIn } from '../features/auth/SignIn';
+import { SignIn } from '../features/auth/sign-in';
 import { useSession, useSignOut } from '../features/auth/use-session';
-import { SpaceList } from '../features/spaces/SpaceList';
+import { SpaceList } from '../features/spaces/space-list';
 
 export function Home() {
   const session = useSession();
