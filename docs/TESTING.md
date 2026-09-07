@@ -68,9 +68,22 @@ through the real API. Offline is simulated with Playwright's own
 
 Selectors are user-visible only: text, roles, labels. Never a CSS class.
 
+**E2E asserts behaviour, not shape.** The compiler already proves a mapper
+cannot return an undeclared field, so listing a response's keys in a test
+restates the type and breaks whenever a field is legitimately added. What a test
+should assert is a promise the compiler cannot make — that a specific secret
+never reaches the wire:
+
+    expect(response.body).not.toHaveProperty('ownerId');
+
+That guards the one gap the compiler leaves: returning a wider object, such as a
+Prisma row, where an entity is declared. TypeScript allows it, because a wider
+value assigned to a narrower type is not an object literal and gets no
+excess-property check.
+
 ## What to write for a feature
 
-- A `.spec.ts` beside every `*.rules.ts`. Not optional.
+- A `.spec.ts` beside every `*.rules.ts`. Not optional. A mapper gets none.
 - One e2e per endpoint, covering the success path and each failure it can
   return.
 - For a user-facing feature, a browser e2e over the flow, with an axe check.

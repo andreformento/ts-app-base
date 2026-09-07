@@ -23,21 +23,25 @@ Conventional Nest. One directory per feature, each a module.
       config/environment.ts  env DTO, validated by ConfigModule at boot
       prisma/                PrismaModule and PrismaService (global)
       auth/                  controller, service, rules, jwt strategy, guard
-      memberships/           the space role guard, its decorators and rules
-      spaces/                controller, service, rules, dto, entities
+      memberships/           membership.rules.ts, memberships.service.ts,
+                             space-role.guard.ts and its two decorators
+      spaces/                controller, service, rules, mapper, dto, entities
       health/                readiness
     prisma/schema.prisma     database schema and migrations
     test/e2e/                harness plus one spec per feature
 
-Two files per feature are pure and therefore unit-tested:
+Two files per feature are pure:
 
-**`<feature>.rules.ts`** — business rules the framework cannot express. A
-service imports them; a rule never imports a service.
+**`<feature>.rules.ts`** — business rules the framework cannot express. Always
+unit-tested. A service imports them; a rule never imports a service.
 
 **`<feature>.mapper.ts`** — turning a database row into the entity a client
 receives. It builds the entity as an object literal, so an undeclared column is
 a compile error rather than a leak. Never spread a row into it: `{ ...row }`
-compiles and leaks. It needs no test unless it makes a decision.
+compiles and leaks. It carries **no test** unless it makes a decision — the
+compiler already proves the shape.
+
+`docs/FEATURE.md` has the full procedure and the signatures.
 
 ## apps/web
 

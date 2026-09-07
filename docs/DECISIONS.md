@@ -9,12 +9,11 @@ Nest is used the way its documentation uses it: resource modules, DI, DTOs with
 built-in `HttpException` subclasses, `@nestjs/config`, `@nestjs/swagger`,
 `@nestjs/passport`. React is written the way React is normally written.
 
-This is a deliberate position, not an absence of one. A layered architecture —
-`model` / `logic` / `wire` / `adapter` / `application` / `diplomat`, with an
-import matrix enforced by lint — was built and measured against it. Every rule
-held, but it cost about three times the code per feature and most of that bought
-nothing for a resource with no domain of its own. Reach for layers when a
-feature earns them, not by default.
+A previous version of this repository used a custom hexagonal architecture —
+`model` / `logic` / `wire` / `adapter` / `application` / `diplomat`, with the
+import matrix enforced by lint. It worked and every rule held, but it cost
+about three times the code per feature and most of that bought nothing for
+CRUD. It was replaced deliberately, not abandoned.
 
 ## No mocks, and rules as pure functions
 
@@ -116,8 +115,14 @@ This replaced `plainToInstance(Entity, row, { excludeExtraneousValues: true })`
 with `@Expose()` on every field and a `ClassSerializerInterceptor`. That was a
 runtime whitelist whose type was a claim: the function returned `SpaceEntity`
 whatever the object held, so a forgotten `@Expose` leaked silently. All three —
-the decorators, the option, the interceptor — are gone, along with the specs
-that asserted no leak.
+the decorators, the option, the interceptor — are gone, along with the unit
+specs that listed an entity's fields.
+
+One assertion survives, in e2e, and it is a different kind of claim: that a
+named secret never reaches the wire. The compiler proves a _mapper_ cannot leak,
+but returning a wider object — a Prisma row where an entity is declared —
+compiles, because only object literals get an excess-property check. See
+`docs/TESTING.md`.
 
 A mapper also exposes a plural form (`toSpaceEntities`) so a caller never maps
 inline; half the mapping in the mapper and half in the service is how they
@@ -153,8 +158,14 @@ no space id in its params is not space-scoped and passes through, so the space
 id parameter must be named `id` or `spaceId`.
 
 This replaced the same lookup-and-check written four times across two services,
-with the lookup itself copy-pasted between them. Services no longer take a
-`userId` in order to decide anything; they take what they need to do the work.
+with the lookup itself copy-pasted between them. A service no longer takes a
+`userId` in order to look a role up.
+
+**A role is not ownership.** The guard knows what a role may do; it has not
+loaded the row, so it cannot answer "is this yours". A rule like _a guest may
+delete only their own post_ is a pure function in `<feature>.rules.ts` and the
+service does pass the caller's id to it. `docs/FEATURE.md` § Role is not
+ownership.
 
 Cost accepted: authorization now lives at the HTTP edge. A service called from
 somewhere that is not a request — a job, another service — is not checked. There
@@ -162,10 +173,10 @@ is no such caller yet; when there is, the check has to move or be repeated
 deliberately.
 
 CASL was considered and deferred. It is the Nest-documented answer for richer
-rules — a field-level permission such as "this role sees the location and that
-one does not", or a per-resource condition such as "the author still sees their
-own hidden comment". For two roles it is more machinery than it saves. Revisit
-when the first such rule lands.
+rules, and `PRODUCT.md` will need them — per-post location privacy is a
+field-level permission and quiet moderation is a per-resource condition. For two
+roles it is more machinery than it saves. Revisit when the first field-level
+rule lands.
 
 ## Privacy in responses
 
@@ -181,17 +192,17 @@ what ships.
 
 ## Invitations
 
-A host creates a tokenized invite and redeeming it makes the redeemer a guest.
-Single use, expires in a week.
+`PRODUCT.md` describes joining as an invite link plus host approval. What exists
+is the first half: a host creates a tokenized invite, and redeeming it makes the
+redeemer a guest. Single use, expires in a week.
 
-It exists because the e2e suite needed a guest, and a test that writes a
+The waiting room and the host's approval step are **not** implemented. When they
+are, `Membership` gains a status and redeeming will create a pending row rather
+than a guest one.
+
+It was built now because the e2e suite needed a guest, and a test that writes a
 membership row directly is testing a database rather than an API. Anything a
 test needs must be reachable through an endpoint.
-
-If your product wants an approval step — the invited person waits, the host
-approves — `Membership` gains a status and redeeming creates a pending row
-instead of a guest one.
-
 
 ## The validation pipe
 
@@ -217,5 +228,5 @@ expects 400.
 **The deploy target.** CI produces a container and a static bundle; nothing
 depends on a platform. See `docs/DEPLOY.md`.
 
-**i18n, offline behaviour and realtime.** None is implemented. Each needs a
-decision recorded here before a dependency is added.
+**i18n, offline behaviour and realtime.** `PRODUCT.md` calls for all three and
+none is implemented.

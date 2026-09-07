@@ -10,7 +10,7 @@ learn — the rules below are the few places we deviate or decide.
 
 | File                | Contents                                             |
 | ------------------- | ---------------------------------------------------- |
-| `PRODUCT.md`        | What the product is. Read before designing a feature. If it is still the stub, ask rather than invent |
+| `PRODUCT.md`        | What the product is. Read before designing a feature |
 | `docs/STRUCTURE.md` | Where files go, commands, the local stack            |
 | `docs/TESTING.md`   | The two tiers and the mock ban                       |
 | `docs/DECISIONS.md` | Settled decisions and rejected alternatives          |
@@ -43,20 +43,9 @@ learn — the rules below are the few places we deviate or decide.
 
 ## Adding a feature to the api
 
-```
-nest g resource <name>          # or copy src/spaces
-```
-
-Then, in order:
-
-1. `<name>.rules.ts` + `.spec.ts` — the rules, pure, tested first
-2. `dto/` — what may enter, `class-validator` decorators, types only
-3. `entities/` — what may leave. Plain classes, no decorators
-4. `<name>.mapper.ts` — row to entity, built as an object literal so the
-   compiler rejects any undeclared field. No test unless it makes a decision
-5. `<name>.service.ts` — I/O and orchestration, calling the rules and the mapper
-6. `<name>.controller.ts` — routes, thin
-7. `test/e2e/<name>.e2e-spec.ts` — every endpoint, success and failure
+`docs/FEATURE.md` is the procedure: routes, the decorators and their
+signatures, how to obtain the caller, the ordered file list, and how to write
+the e2e. `src/spaces` and `src/invites` are the worked examples.
 
 ## Commands
 

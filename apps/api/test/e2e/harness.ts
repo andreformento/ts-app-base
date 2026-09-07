@@ -3,20 +3,12 @@ import { inject } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
 import { signIdToken } from './identity-provider';
 import { call } from './client';
+import type { Session } from './responses';
 
 export const WEB_CLIENT = 'web-client';
 export const MOBILE_CLIENT = 'mobile-client';
 
-export type Signed = {
-  readonly accessToken: string;
-  readonly refreshToken: string;
-  readonly cookies: readonly string[];
-  readonly user: {
-    readonly id: string;
-    readonly email: string;
-    readonly name: string;
-  };
-};
+export type Signed = Session & { readonly cookies: readonly string[] };
 
 export type TokenClaims = {
   subject: string;

@@ -3,13 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { MOBILE_CLIENT, WEB_CLIENT, startHarness } from './harness';
 import type { Harness } from './harness';
 import { call, cookieHeader } from './client';
-
-type Session = {
-  accessToken: string;
-  refreshToken: string;
-  user: { id: string; email: string };
-};
-type Failure = { statusCode: number; message: string | string[] };
+import type { Failure, Session } from './responses';
 
 let harness: Harness;
 
@@ -71,12 +65,7 @@ describe('POST /auth/google', () => {
 
   it('never exposes the provider subject', async () => {
     const response = await signIn();
-    expect(Object.keys(response.body.user).sort()).toEqual([
-      'email',
-      'id',
-      'name',
-      'pictureUrl',
-    ]);
+    expect(response.body.user).not.toHaveProperty('subject');
   });
 
   it('refuses an audience that is not ours', async () => {

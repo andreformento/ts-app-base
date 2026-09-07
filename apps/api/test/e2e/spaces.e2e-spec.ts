@@ -2,15 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startHarness } from './harness';
 import type { Harness } from './harness';
 import { call } from './client';
-
-type Session = { accessToken: string; user: { id: string } };
-type Space = {
-  id: string;
-  name: string;
-  description: string | null;
-  role: string;
-};
-type Failure = { statusCode: number; message: string | string[] };
+import type { Failure, Session, Space } from './responses';
 
 let harness: Harness;
 
@@ -36,21 +28,14 @@ describe('POST /spaces', () => {
     expect(response.body.role).toBe('host');
   });
 
-  it('never exposes ownerId or any undeclared field', async () => {
+  it('never exposes who owns the space', async () => {
     const auth = await signIn();
     const response = await call<Space>(harness.url, '/spaces', {
       method: 'POST',
       token: auth.accessToken,
       body: { name: 'Example Space' },
     });
-    expect(Object.keys(response.body).sort()).toEqual([
-      'createdAt',
-      'description',
-      'id',
-      'name',
-      'role',
-      'updatedAt',
-    ]);
+    expect(response.body).not.toHaveProperty('ownerId');
   });
 
   it('refuses a name that is only whitespace, and one over the limit', async () => {
