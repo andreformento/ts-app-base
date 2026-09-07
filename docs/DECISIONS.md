@@ -1,6 +1,16 @@
 # Decisions
 
-Settled. Do not relitigate; add a superseding entry instead.
+Why the code is the way it is, and what was rejected on the way. Every entry
+describes what is true **now**.
+
+These are not constraints on changing the project. When the owner asks for a
+change, the change happens and the entry that described the old behaviour is
+rewritten in the same commit — a refactor that leaves an entry stale is not
+finished. Read an entry before undoing it, so the reasoning is answered rather
+than rediscovered; that is the only obligation.
+
+An agent asked to change something does not need permission to contradict a
+decision recorded here. It needs to update this file too.
 
 ## Follow the frameworks
 

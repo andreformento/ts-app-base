@@ -13,8 +13,19 @@ learn — the rules below are the few places we deviate or decide.
 | `PRODUCT.md`        | What the product is. Read before designing a feature |
 | `docs/STRUCTURE.md` | Where files go, commands, the local stack            |
 | `docs/TESTING.md`   | The two tiers and the mock ban                       |
-| `docs/DECISIONS.md` | Settled decisions and rejected alternatives          |
+| `docs/DECISIONS.md` | Why the code is as it is, and what was rejected      |
 | `docs/DEPLOY.md`    | Build outputs. The host is an open decision          |
+
+## Changing the project
+
+The documents describe the code; they do not govern it. When you are asked to
+change a structure, change the code **and** the documents that described it, in
+the same commit. A refactor that leaves a document stale is incomplete, and the
+next agent will rebuild what you just removed — that has already happened once
+here.
+
+Never answer a request for a change by citing a rule below as a reason not to.
+Make the change and rewrite the rule.
 
 ## The rules
 
